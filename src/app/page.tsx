@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import BmiCalculatorWidget from '@/components/BmiCalculatorWidget';
@@ -10,11 +10,12 @@ import AuthModal from '@/components/AuthModal';
 import { mockProfile, mockWeightLogs, mockDailyCheckins } from '@/lib/mockData';
 import { UserProfile, WeightLog, DailyCheckin } from '@/types';
 import { calculateBMI, getBMICategory } from '@/lib/bmi';
+import { createClient } from '@/lib/supabase/client';
 import { Dumbbell, ShieldCheck, Heart, Sparkles, Flame, CheckCircle } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'calculator'>('home');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true); // default logged in for immediate interactive experience
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true); // default demo logged in
   const [profile, setProfile] = useState<UserProfile>(mockProfile);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>(mockWeightLogs);
   const [checkins, setCheckins] = useState<DailyCheckin[]>(mockDailyCheckins);
@@ -22,6 +23,79 @@ export default function Home() {
   // Auth modal state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
+  // Supabase real-time auth check on mount
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) return;
+
+    // Check existing active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+        const meta = session.user.user_metadata || {};
+        const userProf: UserProfile = {
+          id: session.user.id,
+          email: session.user.email || 'athlete@dsgym.com',
+          fullName: meta.full_name || 'Gym Athlete',
+          heightCm: Number(meta.height_cm) || 178,
+          startingWeightKg: Number(meta.target_weight_kg) ? Number(meta.target_weight_kg) + 8 : 84,
+          currentWeightKg: Number(meta.target_weight_kg) ? Number(meta.target_weight_kg) + 6 : 82,
+          targetWeightKg: Number(meta.target_weight_kg) || 75,
+          gender: 'unspecified',
+          dailyReminderTime: '08:00',
+          remindersEnabled: true,
+          membershipTier: 'Active Member',
+          createdAt: session.user.created_at,
+        };
+        setProfile(userProf);
+
+        // Fetch user's live logs from Supabase
+        supabase.from('weight_logs').select('*').eq('user_id', session.user.id).order('logged_date', { ascending: true })
+          .then(({ data: logs }) => {
+            if (logs && logs.length > 0) {
+              setWeightLogs(logs.map((l: any) => ({
+                id: l.id,
+                userId: l.user_id,
+                weightKg: Number(l.weight_kg),
+                bmi: Number(l.bmi),
+                category: l.category,
+                notes: l.notes,
+                loggedDate: l.logged_date,
+              })));
+            }
+          });
+
+        supabase.from('daily_checkins').select('*').eq('user_id', session.user.id).order('checkin_date', { ascending: true })
+          .then(({ data: chks }) => {
+            if (chks && chks.length > 0) {
+              setCheckins(chks.map((c: any) => ({
+                id: c.id,
+                userId: c.user_id,
+                checkinDate: c.checkin_date,
+                workoutCompleted: c.workout_completed,
+                workoutType: c.workout_type,
+                workoutDurationMin: c.workout_duration_min,
+                waterLiters: Number(c.water_liters),
+                energyRating: c.energy_rating,
+                dietFollowed: c.diet_followed,
+                notes: c.notes,
+              })));
+            }
+          });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleOpenAuth = (mode: 'login' | 'signup') => {
     setAuthMode(mode);
@@ -48,7 +122,11 @@ export default function Home() {
     setActiveTab('dashboard');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const supabase = createClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setIsLoggedIn(false);
     setActiveTab('home');
   };
@@ -69,7 +147,6 @@ export default function Home() {
     };
 
     setWeightLogs((prev) => {
-      // update if today already exists, otherwise append
       const filtered = prev.filter((l) => l.loggedDate !== today);
       return [...filtered, newLog].sort((a, b) => a.loggedDate.localeCompare(b.loggedDate));
     });
@@ -78,6 +155,21 @@ export default function Home() {
       ...prev,
       currentWeightKg: weightKg,
     }));
+
+    // Async sync to Supabase
+    const supabase = createClient();
+    if (supabase && isLoggedIn) {
+      supabase.from('weight_logs').upsert({
+        user_id: profile.id,
+        weight_kg: weightKg,
+        bmi,
+        category,
+        notes: notes || '',
+        logged_date: today,
+      }).then(({ error }) => {
+        if (error) console.info('Supabase weight log sync notice:', error.message);
+      });
+    }
   };
 
   const handleAddCheckin = (newCheckinData: Omit<DailyCheckin, 'id' | 'userId'>) => {
@@ -90,6 +182,24 @@ export default function Home() {
       ...prev.filter((c) => c.checkinDate !== newCheckin.checkinDate),
       newCheckin,
     ]);
+
+    // Async sync to Supabase
+    const supabase = createClient();
+    if (supabase && isLoggedIn) {
+      supabase.from('daily_checkins').upsert({
+        user_id: profile.id,
+        checkin_date: newCheckin.checkinDate,
+        workout_completed: newCheckin.workoutCompleted,
+        workout_type: newCheckin.workoutType,
+        workout_duration_min: newCheckin.workoutDurationMin,
+        water_liters: newCheckin.waterLiters,
+        energy_rating: newCheckin.energyRating,
+        diet_followed: newCheckin.dietFollowed,
+        notes: newCheckin.notes || '',
+      }).then(({ error }) => {
+        if (error) console.info('Supabase checkin sync notice:', error.message);
+      });
+    }
   };
 
   const handleUpdateReminder = (time: string, enabled: boolean) => {
