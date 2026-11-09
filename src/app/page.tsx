@@ -6,14 +6,15 @@ import Hero from '@/components/Hero';
 import BmiCalculatorWidget from '@/components/BmiCalculatorWidget';
 import GymFeatures from '@/components/GymFeatures';
 import DashboardView from '@/components/DashboardView';
+import WorkoutPlanView from '@/components/WorkoutPlanView';
 import AuthModal from '@/components/AuthModal';
 import { UserProfile, WeightLog, DailyCheckin } from '@/types';
 import { calculateBMI, getBMICategory } from '@/lib/bmi';
 import { createClient } from '@/lib/supabase/client';
-import { Dumbbell, ShieldCheck, Sparkles, Lock, ArrowRight, UserCheck } from 'lucide-react';
+import { Dumbbell, ShieldCheck, Sparkles, Lock, ArrowRight, UserCheck, Calendar } from 'lucide-react';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'calculator'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'calculator' | 'workout-plan'>('home');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false); // MUST be false for first time user
   const [profile, setProfile] = useState<UserProfile | null>(null); // NO demo user
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]); // NO demo logs
@@ -66,11 +67,9 @@ export default function Home() {
                 notes: l.notes,
                 loggedDate: l.logged_date,
               })));
-              // Update current weight to most recent log
               const latestLog = logs[logs.length - 1];
               setProfile((p) => p ? { ...p, currentWeightKg: Number(latestLog.weight_kg) } : p);
             } else {
-              // If no logs yet in table, initialize starting log
               const initialBmi = calculateBMI(registeredWeight, registeredHeight);
               const initialCat = getBMICategory(initialBmi);
               const initialLog: WeightLog = {
@@ -156,7 +155,6 @@ export default function Home() {
     };
     setProfile(newProf);
 
-    // Initial baseline weigh-in log for this user
     const initialLog: WeightLog = {
       id: `log-${Date.now()}`,
       userId: newProf.id,
@@ -209,7 +207,6 @@ export default function Home() {
       currentWeightKg: weightKg,
     }) : null);
 
-    // Async sync to Supabase
     const supabase = createClient();
     if (supabase && isLoggedIn) {
       supabase.from('weight_logs').upsert({
@@ -237,7 +234,6 @@ export default function Home() {
       newCheckin,
     ]);
 
-    // Async sync to Supabase
     const supabase = createClient();
     if (supabase && isLoggedIn) {
       supabase.from('daily_checkins').upsert({
@@ -294,7 +290,7 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1">
         
-        {/* LANDING PAGE (First screen any visitor sees) */}
+        {/* LANDING PAGE */}
         {activeTab === 'home' && (
           <div>
             <Hero
@@ -332,11 +328,57 @@ export default function Home() {
               />
             </section>
 
+            {/* 30-Day Transformation Challenge Teaser Banner on Landing Page */}
+            <section className="py-12 px-4 max-w-7xl mx-auto">
+              <div className="bg-gradient-to-r from-surface via-surface-subtle to-surface border-2 border-neon-lime/30 rounded-3xl p-8 sm:p-12 shadow-card flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-neon-lime/10 blur-[100px] pointer-events-none" />
+                <div className="space-y-4 max-w-2xl relative z-10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon-lime/10 border border-neon-lime/30 text-neon-lime text-xs font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>30-Day Visual Physique Planner</span>
+                  </div>
+                  <h2 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight">
+                    Personalized 30-Day Workout Plans For Every Body Type
+                  </h2>
+                  <p className="text-zinc-300 text-sm leading-relaxed">
+                    Choose your starting physique from 3 interactive animated body models (excess weight &amp; big stomach, medium build, or slim frame). Generate an exact day-by-day protocol to lose overall weight, burn belly fat, sculpt 6-pack abs, or pack on muscle mass.
+                  </p>
+                  <div className="flex flex-wrap gap-3 pt-2 text-xs font-semibold text-zinc-400">
+                    <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-accent-orange">
+                      🔥 Big Stomach &amp; Heavy Build
+                    </span>
+                    <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-neon-lime">
+                      ⚡ Medium Athletic Build
+                    </span>
+                    <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-accent-cyan">
+                      💪 Slim Hypertrophy Build
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setActiveTab('workout-plan')}
+                  className="px-8 py-4 rounded-xl font-black uppercase text-sm tracking-wider bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon transition-all flex items-center gap-3 shrink-0 transform hover:-translate-y-0.5 relative z-10"
+                >
+                  <Calendar className="w-5 h-5 text-background" />
+                  <span>Generate 30-Day Plan</span>
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </div>
+            </section>
+
             {/* Gym Classes & Pricing */}
             <GymFeatures
               onJoinClick={() => handleOpenAuth('signup')}
             />
           </div>
+        )}
+
+        {/* 30-DAY WORKOUT PLANNER VIEW */}
+        {activeTab === 'workout-plan' && (
+          <WorkoutPlanView
+            onJoinClick={() => handleOpenAuth('signup')}
+          />
         )}
 
         {/* BMI ADVISOR VIEW */}
@@ -477,6 +519,7 @@ export default function Home() {
             <div className="flex items-center gap-6 text-xs text-zinc-400">
               <button onClick={() => setActiveTab('home')} className="hover:text-neon-lime transition-colors">Overview</button>
               <button onClick={() => setActiveTab('calculator')} className="hover:text-neon-lime transition-colors">BMI Advisor</button>
+              <button onClick={() => setActiveTab('workout-plan')} className="hover:text-neon-lime transition-colors">30-Day Plan</button>
               <button 
                 onClick={() => {
                   if (isLoggedIn) setActiveTab('dashboard');

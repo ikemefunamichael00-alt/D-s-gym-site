@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dumbbell, Activity, Flame, User, LogOut, Menu, X, Bell } from 'lucide-react';
+import { Dumbbell, Activity, Flame, LogOut, Menu, X, Calendar } from 'lucide-react';
 
 interface NavbarProps {
   isLoggedIn: boolean;
-  activeTab: 'home' | 'dashboard' | 'calculator';
-  onNavigate: (tab: 'home' | 'dashboard' | 'calculator') => void;
+  activeTab: 'home' | 'dashboard' | 'calculator' | 'workout-plan';
+  onNavigate: (tab: 'home' | 'dashboard' | 'calculator' | 'workout-plan') => void;
   onOpenAuth: (mode: 'login' | 'signup') => void;
   onLogout: () => void;
   userName?: string;
@@ -49,7 +49,7 @@ export default function Navbar({
           <div className="hidden md:flex items-center gap-1 bg-surface-subtle/80 p-1.5 rounded-full border border-surface-border">
             <button
               onClick={() => onNavigate('home')}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                 activeTab === 'home'
                   ? 'bg-neon-lime text-background font-bold shadow-neon'
                   : 'text-zinc-300 hover:text-white hover:bg-surface-hover'
@@ -59,7 +59,7 @@ export default function Navbar({
             </button>
             <button
               onClick={() => onNavigate('calculator')}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'calculator'
                   ? 'bg-neon-lime text-background font-bold shadow-neon'
                   : 'text-zinc-300 hover:text-white hover:bg-surface-hover'
@@ -69,8 +69,19 @@ export default function Navbar({
               BMI Advisor
             </button>
             <button
+              onClick={() => onNavigate('workout-plan')}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === 'workout-plan'
+                  ? 'bg-neon-lime text-background font-bold shadow-neon'
+                  : 'text-zinc-300 hover:text-white hover:bg-surface-hover'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-neon-lime" />
+              30-Day Plan
+            </button>
+            <button
               onClick={() => onNavigate('dashboard')}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'dashboard'
                   ? 'bg-neon-lime text-background font-bold shadow-neon'
                   : 'text-zinc-300 hover:text-white hover:bg-surface-hover'
@@ -152,6 +163,15 @@ export default function Navbar({
           >
             <Activity className="w-4 h-4" />
             BMI Advisor & Calculator
+          </button>
+          <button
+            onClick={() => { onNavigate('workout-plan'); setMobileMenuOpen(false); }}
+            className={`w-full text-left px-4 py-3 rounded-xl font-semibold flex items-center gap-2 ${
+              activeTab === 'workout-plan' ? 'bg-neon-lime text-background' : 'text-zinc-300'
+            }`}
+          >
+            <Calendar className="w-4 h-4 text-neon-lime" />
+            30-Day Workout Plan
           </button>
           <button
             onClick={() => { onNavigate('dashboard'); setMobileMenuOpen(false); }}
