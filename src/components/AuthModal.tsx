@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Lock, Mail, User, Scale, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Lock, Mail, User, Scale, ArrowRight, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 interface AuthModalProps {
@@ -13,7 +13,7 @@ interface AuthModalProps {
 
 export default function AuthModal({
   isOpen,
-  initialMode = 'login',
+  initialMode = 'signup',
   onClose,
   onSuccess,
 }: AuthModalProps) {
@@ -21,11 +21,30 @@ export default function AuthModal({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [heightCm, setHeightCm] = useState(178);
-  const [weightKg, setWeightKg] = useState(84);
-  const [targetWeightKg, setTargetWeightKg] = useState(75);
+  const [heightCm, setHeightCm] = useState(175);
+  const [weightKg, setWeightKg] = useState(80);
+  const [targetWeightKg, setTargetWeightKg] = useState(70);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successNotice, setSuccessNotice] = useState('');
+
+  // Lock background body scroll when modal is open so only the modal scrolls
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  // Sync mode if initialMode prop changes
+  useEffect(() => {
+    setMode(initialMode);
+    setErrorMsg('');
+    setSuccessNotice('');
+  }, [initialMode, isOpen]);
 
   if (!isOpen) return null;
 
@@ -33,82 +52,89 @@ export default function AuthModal({
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+    setSuccessNotice('');
 
     const supabase = createClient();
 
-    // If Supabase is connected and ready
-    if (supabase && isSupabaseConfigured()) {
-      try {
-        if (mode === 'signup') {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: fullName,
-                height_cm: heightCm,
-                target_weight_kg: targetWeightKg,
-              },
-            },
-          });
-          if (error) throw error;
-          onSuccess({
-            email: data.user?.email || email,
-            name: fullName || 'Gym Member',
-            height: heightCm,
-            weight: weightKg,
-            targetWeight: targetWeightKg,
-          });
-        } else {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (error) throw error;
-          onSuccess({
-            email: data.user?.email || email,
-            name: data.user?.user_metadata?.full_name || 'Gym Member',
-            height: Number(data.user?.user_metadata?.height_cm) || 178,
-            weight: 82.3,
-            targetWeight: Number(data.user?.user_metadata?.target_weight_kg) || 75,
-          });
+    if (!supabase || !isSupabaseConfigured()) {
+      setErrorMsg('Supabase is not configured. Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (mode === 'signup') {
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters long.');
         }
-        onClose();
-      } catch (err: any) {
-        setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // Offline / Quick Demo Mode fallback
-      setTimeout(() => {
+
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              height_cm: heightCm,
+              starting_weight_kg: weightKg,
+              weight_kg: weightKg,
+              target_weight_kg: targetWeightKg,
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        // If email confirmation is required by Supabase
+        if (data.user && !data.session) {
+          setSuccessNotice(
+            `Account created! Please check your inbox at ${email} to confirm your email, then log in.`
+          );
+          setLoading(false);
+          return;
+        }
+
         onSuccess({
-          email: email || 'demo.athlete@dsgym.com',
-          name: fullName || (mode === 'signup' ? 'New Athlete' : 'Alex Vance'),
+          email: data.user?.email || email,
+          name: fullName || 'Gym Athlete',
           height: heightCm,
           weight: weightKg,
           targetWeight: targetWeightKg,
         });
-        setLoading(false);
         onClose();
-      }, 500);
+      } else {
+        // Login mode
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) throw error;
+
+        const userMeta = data.user?.user_metadata || {};
+        onSuccess({
+          email: data.user?.email || email,
+          name: userMeta.full_name || 'Gym Athlete',
+          height: Number(userMeta.height_cm) || 175,
+          weight: Number(userMeta.weight_kg) || Number(userMeta.starting_weight_kg) || 80,
+          targetWeight: Number(userMeta.target_weight_kg) || 70,
+        });
+        onClose();
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDemoLogin = () => {
-    onSuccess({
-      email: 'alex.fitness@dsgym.com',
-      name: 'Alex Vance',
-      height: 178,
-      weight: 82.3,
-      targetWeight: 75.0,
-    });
-    onClose();
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-surface border border-surface-border rounded-3xl p-6 sm:p-8 shadow-card overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center min-h-screen"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-lg bg-surface border border-surface-border rounded-3xl p-6 sm:p-8 shadow-card my-auto max-h-[92vh] overflow-y-auto overscroll-contain">
         
         {/* Glow */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-neon-lime/10 blur-[80px] pointer-events-none" />
@@ -116,13 +142,15 @@ export default function AuthModal({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full text-zinc-400 hover:text-white bg-surface-subtle border border-surface-border transition-colors"
+          type="button"
+          aria-label="Close"
+          className="absolute top-5 right-5 p-2 rounded-full text-zinc-400 hover:text-white bg-surface-subtle border border-surface-border transition-colors z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 pt-2">
           <div className="w-12 h-12 rounded-2xl bg-neon-lime/10 border border-neon-lime/20 flex items-center justify-center text-neon-lime mx-auto mb-3 glow-lime-subtle">
             <Lock className="w-6 h-6" />
           </div>
@@ -131,51 +159,55 @@ export default function AuthModal({
           </h3>
           <p className="text-xs text-zinc-400 mt-1">
             {mode === 'signup'
-              ? 'Set your initial metrics to start tracking weight loss progress'
-              : 'Log in with your Supabase credentials to access your dashboard'}
+              ? 'Enter your body metrics to start tracking your weight loss progress'
+              : 'Sign in to access your personal weight tracker & daily habits'}
           </p>
-        </div>
-
-        {/* Demo Mode Quick Access Pill */}
-        <div className="mb-6 p-3 rounded-2xl bg-surface-subtle/70 border border-neon-lime/20 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-zinc-300">
-            <Zap className="w-4 h-4 text-neon-lime" />
-            <span>Want to test the member dashboard instantly?</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            className="px-3 py-1.5 rounded-lg bg-neon-lime/15 border border-neon-lime/30 text-neon-lime text-xs font-bold hover:bg-neon-lime hover:text-background transition-all"
-          >
-            Instant Demo
-          </button>
         </div>
 
         {/* Mode Switch Tabs */}
         <div className="flex p-1 bg-surface-subtle rounded-xl border border-surface-border mb-6">
           <button
             type="button"
-            onClick={() => setMode('login')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg uppercase tracking-wider transition-all ${
+            onClick={() => { setMode('signup'); setErrorMsg(''); }}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg uppercase tracking-wider transition-all ${
+              mode === 'signup' ? 'bg-neon-lime text-background shadow-neon' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            Register / Sign Up
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setErrorMsg(''); }}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg uppercase tracking-wider transition-all ${
               mode === 'login' ? 'bg-neon-lime text-background shadow-neon' : 'text-zinc-400 hover:text-white'
             }`}
           >
             Sign In
           </button>
-          <button
-            type="button"
-            onClick={() => setMode('signup')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg uppercase tracking-wider transition-all ${
-              mode === 'signup' ? 'bg-neon-lime text-background shadow-neon' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Register
-          </button>
         </div>
 
+        {/* Error Notification */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium">
-            {errorMsg}
+          <div className="mb-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Success Notice (e.g. Email Confirmation) */}
+        {successNotice && (
+          <div className="mb-4 p-4 rounded-xl bg-neon-lime/10 border border-neon-lime/30 text-neon-lime text-xs font-medium flex items-start gap-2.5">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <div className="space-y-2">
+              <p>{successNotice}</p>
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="underline font-bold text-white hover:text-neon-lime block"
+              >
+                Switch to Sign In →
+              </button>
+            </div>
           </div>
         )}
 
@@ -192,7 +224,7 @@ export default function AuthModal({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Alex Vance"
+                  placeholder="e.g. John Doe"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-surface-subtle border border-surface-border rounded-xl text-white text-sm focus:outline-none focus:border-neon-lime transition-colors"
@@ -220,13 +252,14 @@ export default function AuthModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-              Password
+              Password {mode === 'signup' && <span className="text-[10px] text-zinc-500">(min 6 chars)</span>}
             </label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <input
                 type="password"
                 required
+                minLength={6}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -235,12 +268,15 @@ export default function AuthModal({
             </div>
           </div>
 
-          {/* Extra fields for Sign Up (Height, Weight, Target Weight) */}
+          {/* Physical Metrics for Sign Up (Height, Current Weight, Target Goal) */}
           {mode === 'signup' && (
-            <div className="pt-2 border-t border-surface-border space-y-3">
-              <span className="text-[11px] uppercase tracking-wider font-bold text-neon-lime block">
-                Physical Metrics & Goals
-              </span>
+            <div className="pt-3 border-t border-surface-border space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-wider font-bold text-neon-lime">
+                  Initial Physical Metrics
+                </span>
+                <span className="text-[10px] text-zinc-400">Used for BMI &amp; Goal Advice</span>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
@@ -250,9 +286,10 @@ export default function AuthModal({
                     type="number"
                     min={120}
                     max={230}
+                    required
                     value={heightCm}
                     onChange={(e) => setHeightCm(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-surface-subtle border border-surface-border rounded-xl text-white text-sm focus:outline-none focus:border-neon-lime"
+                    className="w-full px-3 py-2 bg-surface-subtle border border-surface-border rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-neon-lime"
                   />
                 </div>
                 <div>
@@ -264,9 +301,10 @@ export default function AuthModal({
                     step={0.1}
                     min={35}
                     max={250}
+                    required
                     value={weightKg}
                     onChange={(e) => setWeightKg(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-surface-subtle border border-surface-border rounded-xl text-white text-sm focus:outline-none focus:border-neon-lime"
+                    className="w-full px-3 py-2 bg-surface-subtle border border-surface-border rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-neon-lime"
                   />
                 </div>
                 <div>
@@ -278,9 +316,10 @@ export default function AuthModal({
                     step={0.1}
                     min={35}
                     max={250}
+                    required
                     value={targetWeightKg}
                     onChange={(e) => setTargetWeightKg(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-surface-subtle border border-surface-border rounded-xl text-white text-sm focus:outline-none focus:border-neon-lime"
+                    className="w-full px-3 py-2 bg-surface-subtle border border-surface-border rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-neon-lime"
                   />
                 </div>
               </div>
@@ -290,16 +329,18 @@ export default function AuthModal({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 mt-2 rounded-xl font-black uppercase tracking-wider bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3.5 mt-4 rounded-xl font-black uppercase tracking-wider bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <span>{loading ? 'Processing...' : mode === 'signup' ? 'Complete Registration' : 'Sign In To Dashboard'}</span>
+            <span>
+              {loading ? 'Processing...' : mode === 'signup' ? 'Complete Registration' : 'Sign In To Dashboard'}
+            </span>
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
         </form>
 
         <div className="mt-6 flex items-center justify-center gap-2 text-xs text-zinc-500">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Secured with Supabase Row Level Security</span>
+          <span>Secured via Supabase Authentication</span>
         </div>
 
       </div>

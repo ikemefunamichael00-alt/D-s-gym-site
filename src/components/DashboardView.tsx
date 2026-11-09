@@ -132,8 +132,14 @@ export default function DashboardView({
 
   // Find max and min weight for visual chart bounds
   const weights = weightLogs.map((l) => l.weightKg);
-  const minChart = Math.min(...weights, profile.targetWeightKg) - 2;
-  const maxChart = Math.max(...weights, profile.startingWeightKg) + 2;
+  const baseMin = weights.length > 0 
+    ? Math.min(...weights, profile.targetWeightKg) 
+    : Math.min(profile.currentWeightKg || 80, profile.targetWeightKg || 70);
+  const baseMax = weights.length > 0 
+    ? Math.max(...weights, profile.startingWeightKg) 
+    : Math.max(profile.currentWeightKg || 80, profile.startingWeightKg || 80);
+  const minChart = baseMin - 2;
+  const maxChart = Math.max(baseMax + 2, minChart + 6);
 
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -338,90 +344,122 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* Custom Visual SVG Chart */}
-        <div className="h-64 w-full relative">
-          <svg className="w-full h-full overflow-visible" viewBox="0 0 600 200" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="neonGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#CCFF00" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#CCFF00" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
+        {/* Custom Visual SVG Chart or Empty State */}
+        {weightLogs.length === 0 ? (
+          <div className="h-64 flex flex-col items-center justify-center text-center p-6 bg-surface-subtle/40 rounded-2xl border border-dashed border-surface-border">
+            <div className="w-12 h-12 rounded-2xl bg-neon-lime/10 border border-neon-lime/30 flex items-center justify-center text-neon-lime mb-3">
+              <TrendingDown className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-bold text-white uppercase">No Weigh-Ins Recorded Yet</h4>
+            <p className="text-xs text-zinc-400 max-w-sm mt-1 mb-4">
+              Log your initial weigh-in today to calculate your baseline BMI and start plotting your weight progression graph!
+            </p>
+            <button
+              onClick={() => setShowLogModal(true)}
+              className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon"
+            >
+              + Record Initial Weigh-In
+            </button>
+          </div>
+        ) : (
+          <div className="h-64 w-full relative">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 600 200" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="neonGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#CCFF00" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#CCFF00" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
 
-            {/* Target line */}
-            {(() => {
-              const yTarget = 200 - ((profile.targetWeightKg - minChart) / (maxChart - minChart)) * 180;
-              return (
-                <line
-                  x1="0"
-                  y1={yTarget}
-                  x2="600"
-                  y2={yTarget}
-                  stroke="#10B981"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                  opacity="0.6"
-                />
-              );
-            })()}
+              {/* Target line */}
+              {(() => {
+                const yTarget = 200 - ((profile.targetWeightKg - minChart) / (maxChart - minChart)) * 180;
+                return (
+                  <line
+                    x1="0"
+                    y1={yTarget}
+                    x2="600"
+                    y2={yTarget}
+                    stroke="#10B981"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                    opacity="0.6"
+                  />
+                );
+              })()}
 
-            {/* Points and Area */}
-            {(() => {
-              if (weightLogs.length < 2) return null;
-              const points = weightLogs.map((log, idx) => {
-                const x = (idx / (weightLogs.length - 1)) * 580 + 10;
-                const y = 200 - ((log.weightKg - minChart) / (maxChart - minChart)) * 180;
-                return { x, y, weight: log.weightKg, date: log.loggedDate };
-              });
-
-              const pathD = points.reduce((acc, curr, idx) => {
-                return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`;
-              }, '');
-
-              const areaD = `${pathD} L ${points[points.length - 1].x} 200 L ${points[0].x} 200 Z`;
-
-              return (
-                <g>
-                  {/* Fill */}
-                  <path d={areaD} fill="url(#neonGradient)" />
-                  {/* Stroke */}
-                  <path d={pathD} fill="none" stroke="#CCFF00" strokeWidth="3" />
-                  {/* Circles */}
-                  {points.map((p, pIdx) => (
-                    <g key={pIdx}>
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={5}
-                        fill="#08090C"
-                        stroke="#CCFF00"
-                        strokeWidth="3"
-                        className="transition-all hover:scale-125"
-                      />
-                      <text
-                        x={p.x}
-                        y={p.y - 10}
-                        textAnchor="middle"
-                        fill="#F3F4F6"
-                        fontSize="10"
-                        fontWeight="bold"
-                      >
-                        {p.weight} kg
+              {/* Points and Area */}
+              {(() => {
+                if (weightLogs.length === 1) {
+                  const log = weightLogs[0];
+                  const y = 200 - ((log.weightKg - minChart) / (maxChart - minChart)) * 180;
+                  return (
+                    <g>
+                      <circle cx="300" cy={y} r={7} fill="#08090C" stroke="#CCFF00" strokeWidth="4" />
+                      <text x="300" y={y - 14} textAnchor="middle" fill="#CCFF00" fontSize="12" fontWeight="bold">
+                        {log.weightKg} kg (Starting Point)
                       </text>
                     </g>
-                  ))}
-                </g>
-              );
-            })()}
-          </svg>
-        </div>
+                  );
+                }
+
+                const points = weightLogs.map((log, idx) => {
+                  const x = (idx / (weightLogs.length - 1)) * 580 + 10;
+                  const y = 200 - ((log.weightKg - minChart) / (maxChart - minChart)) * 180;
+                  return { x, y, weight: log.weightKg, date: log.loggedDate };
+                });
+
+                const pathD = points.reduce((acc, curr, idx) => {
+                  return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`;
+                }, '');
+
+                const areaD = `${pathD} L ${points[points.length - 1].x} 200 L ${points[0].x} 200 Z`;
+
+                return (
+                  <g>
+                    {/* Fill */}
+                    <path d={areaD} fill="url(#neonGradient)" />
+                    {/* Stroke */}
+                    <path d={pathD} fill="none" stroke="#CCFF00" strokeWidth="3" />
+                    {/* Circles */}
+                    {points.map((p, pIdx) => (
+                      <g key={pIdx}>
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r={5}
+                          fill="#08090C"
+                          stroke="#CCFF00"
+                          strokeWidth="3"
+                          className="transition-all hover:scale-125"
+                        />
+                        <text
+                          x={p.x}
+                          y={p.y - 10}
+                          textAnchor="middle"
+                          fill="#F3F4F6"
+                          fontSize="10"
+                          fontWeight="bold"
+                        >
+                          {p.weight} kg
+                        </text>
+                      </g>
+                    ))}
+                  </g>
+                );
+              })()}
+            </svg>
+          </div>
+        )}
 
         {/* Date labels */}
-        <div className="flex justify-between text-[11px] text-zinc-500 font-semibold pt-4 border-t border-surface-border mt-4">
-          {weightLogs.map((log, i) => (
-            <span key={i}>{log.loggedDate.slice(5)}</span>
-          ))}
-        </div>
+        {weightLogs.length > 0 && (
+          <div className="flex justify-between text-[11px] text-zinc-500 font-semibold pt-4 border-t border-surface-border mt-4">
+            {weightLogs.map((log, i) => (
+              <span key={i}>{log.loggedDate.slice(5)}</span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Grid: Daily Reminder Settings + Daily Habits */}
@@ -515,34 +553,47 @@ export default function DashboardView({
           </div>
 
           <div className="space-y-3">
-            {checkins.slice(-3).reverse().map((chk) => (
-              <div
-                key={chk.id}
-                className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex items-center justify-between"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">{chk.checkinDate}</span>
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-surface border border-surface-border text-neon-lime">
-                      {chk.workoutCompleted ? chk.workoutType : 'Rest Day'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-zinc-400">
-                    <span className="flex items-center gap-1">
-                      <Droplets className="w-3.5 h-3.5 text-sky-400" />
-                      {chk.waterLiters}L Water
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      Energy: {chk.energyRating}/5
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                </div>
+            {checkins.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-surface-subtle/50 border border-dashed border-surface-border text-center space-y-2">
+                <span className="text-xs text-zinc-400 block">No daily check-ins recorded yet.</span>
+                <button
+                  type="button"
+                  onClick={() => setShowCheckinModal(true)}
+                  className="text-xs text-neon-lime font-bold hover:underline"
+                >
+                  + Record First Check-In
+                </button>
               </div>
-            ))}
+            ) : (
+              checkins.slice(-3).reverse().map((chk) => (
+                <div
+                  key={chk.id}
+                  className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex items-center justify-between"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white">{chk.checkinDate}</span>
+                      <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-surface border border-surface-border text-neon-lime">
+                        {chk.workoutCompleted ? chk.workoutType : 'Rest Day'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-zinc-400">
+                      <span className="flex items-center gap-1">
+                        <Droplets className="w-3.5 h-3.5 text-sky-400" />
+                        {chk.waterLiters}L Water
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 text-amber-400" />
+                        Energy: {chk.energyRating}/5
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -575,21 +626,29 @@ export default function DashboardView({
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border text-zinc-200">
-              {weightLogs.slice().reverse().map((log) => (
-                <tr key={log.id} className="hover:bg-surface-subtle/50 transition-colors">
-                  <td className="py-3.5 px-4 font-medium text-white">{log.loggedDate}</td>
-                  <td className="py-3.5 px-4 font-bold text-neon-lime">{log.weightKg} kg</td>
-                  <td className="py-3.5 px-4 font-semibold text-zinc-300">{log.bmi}</td>
-                  <td className="py-3.5 px-4">
-                    <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-surface-subtle border border-surface-border text-zinc-300">
-                      {log.category}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-xs text-zinc-400 max-w-xs truncate">
-                    {log.notes || '—'}
+              {weightLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-xs text-zinc-400">
+                    No weigh-in records found. Click &quot;+ New Entry&quot; or &quot;Log Weight (kg)&quot; to save your first measurement.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                weightLogs.slice().reverse().map((log) => (
+                  <tr key={log.id} className="hover:bg-surface-subtle/50 transition-colors">
+                    <td className="py-3.5 px-4 font-medium text-white">{log.loggedDate}</td>
+                    <td className="py-3.5 px-4 font-bold text-neon-lime">{log.weightKg} kg</td>
+                    <td className="py-3.5 px-4 font-semibold text-zinc-300">{log.bmi}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-surface-subtle border border-surface-border text-zinc-300">
+                        {log.category}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-xs text-zinc-400 max-w-xs truncate">
+                      {log.notes || '—'}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -597,8 +656,13 @@ export default function DashboardView({
 
       {/* Modal 1: Log Weight Modal */}
       {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-surface border border-surface-border rounded-3xl p-6 sm:p-8 max-w-md w-full relative">
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center min-h-screen"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowLogModal(false);
+          }}
+        >
+          <div className="bg-surface border border-surface-border rounded-3xl p-6 sm:p-8 max-w-md w-full relative my-auto max-h-[90vh] overflow-y-auto shadow-card">
             <h3 className="text-xl font-black text-white uppercase mb-2">Record Weigh-In</h3>
             <p className="text-xs text-zinc-400 mb-6">Enter your weight in kilograms for today.</p>
 
@@ -652,8 +716,13 @@ export default function DashboardView({
 
       {/* Modal 2: Daily Check-in Modal */}
       {showCheckinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-surface border border-surface-border rounded-3xl p-6 sm:p-8 max-w-md w-full relative">
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center min-h-screen"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCheckinModal(false);
+          }}
+        >
+          <div className="bg-surface border border-surface-border rounded-3xl p-6 sm:p-8 max-w-md w-full relative my-auto max-h-[90vh] overflow-y-auto shadow-card">
             <h3 className="text-xl font-black text-white uppercase mb-2">Daily Check-In</h3>
             <p className="text-xs text-zinc-400 mb-6">Track your daily gym habits and wellness.</p>
 

@@ -7,45 +7,48 @@ import BmiCalculatorWidget from '@/components/BmiCalculatorWidget';
 import GymFeatures from '@/components/GymFeatures';
 import DashboardView from '@/components/DashboardView';
 import AuthModal from '@/components/AuthModal';
-import { mockProfile, mockWeightLogs, mockDailyCheckins } from '@/lib/mockData';
 import { UserProfile, WeightLog, DailyCheckin } from '@/types';
 import { calculateBMI, getBMICategory } from '@/lib/bmi';
 import { createClient } from '@/lib/supabase/client';
-import { Dumbbell, ShieldCheck, Heart, Sparkles, Flame, CheckCircle } from 'lucide-react';
+import { Dumbbell, ShieldCheck, Sparkles, Lock, ArrowRight, UserCheck } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'calculator'>('home');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true); // default demo logged in
-  const [profile, setProfile] = useState<UserProfile>(mockProfile);
-  const [weightLogs, setWeightLogs] = useState<WeightLog[]>(mockWeightLogs);
-  const [checkins, setCheckins] = useState<DailyCheckin[]>(mockDailyCheckins);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false); // MUST be false for first time user
+  const [profile, setProfile] = useState<UserProfile | null>(null); // NO demo user
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]); // NO demo logs
+  const [checkins, setCheckins] = useState<DailyCheckin[]>([]); // NO demo checkins
   
   // Auth modal state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
 
   // Supabase real-time auth check on mount
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) return;
 
-    // Check existing active session
+    // Check existing active Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setIsLoggedIn(true);
         const meta = session.user.user_metadata || {};
+        const registeredHeight = Number(meta.height_cm) || 175;
+        const registeredWeight = Number(meta.weight_kg) || Number(meta.starting_weight_kg) || 80;
+        const registeredTarget = Number(meta.target_weight_kg) || 70;
+
         const userProf: UserProfile = {
           id: session.user.id,
           email: session.user.email || 'athlete@dsgym.com',
           fullName: meta.full_name || 'Gym Athlete',
-          heightCm: Number(meta.height_cm) || 178,
-          startingWeightKg: Number(meta.target_weight_kg) ? Number(meta.target_weight_kg) + 8 : 84,
-          currentWeightKg: Number(meta.target_weight_kg) ? Number(meta.target_weight_kg) + 6 : 82,
-          targetWeightKg: Number(meta.target_weight_kg) || 75,
+          heightCm: registeredHeight,
+          startingWeightKg: registeredWeight,
+          currentWeightKg: registeredWeight,
+          targetWeightKg: registeredTarget,
           gender: 'unspecified',
           dailyReminderTime: '08:00',
           remindersEnabled: true,
-          membershipTier: 'Active Member',
+          membershipTier: 'Standard Member',
           createdAt: session.user.created_at,
         };
         setProfile(userProf);
@@ -63,6 +66,23 @@ export default function Home() {
                 notes: l.notes,
                 loggedDate: l.logged_date,
               })));
+              // Update current weight to most recent log
+              const latestLog = logs[logs.length - 1];
+              setProfile((p) => p ? { ...p, currentWeightKg: Number(latestLog.weight_kg) } : p);
+            } else {
+              // If no logs yet in table, initialize starting log
+              const initialBmi = calculateBMI(registeredWeight, registeredHeight);
+              const initialCat = getBMICategory(initialBmi);
+              const initialLog: WeightLog = {
+                id: `log-${Date.now()}`,
+                userId: session.user.id,
+                weightKg: registeredWeight,
+                bmi: initialBmi,
+                category: initialCat,
+                notes: 'Initial registration weigh-in',
+                loggedDate: new Date().toISOString().split('T')[0],
+              };
+              setWeightLogs([initialLog]);
             }
           });
 
@@ -89,6 +109,11 @@ export default function Home() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+        setProfile(null);
+        setWeightLogs([]);
+        setCheckins([]);
       }
     });
 
@@ -110,15 +135,39 @@ export default function Home() {
     targetWeight: number;
   }) => {
     setIsLoggedIn(true);
-    setProfile((prev) => ({
-      ...prev,
+
+    const initialBmi = calculateBMI(userData.weight, userData.height);
+    const initialCat = getBMICategory(initialBmi);
+    const today = new Date().toISOString().split('T')[0];
+
+    const newProf: UserProfile = {
+      id: 'usr_' + Date.now(),
       email: userData.email,
       fullName: userData.name,
       heightCm: userData.height,
-      currentWeightKg: userData.weight,
       startingWeightKg: userData.weight,
+      currentWeightKg: userData.weight,
       targetWeightKg: userData.targetWeight,
-    }));
+      gender: 'unspecified',
+      dailyReminderTime: '08:00',
+      remindersEnabled: true,
+      membershipTier: 'Standard Member',
+      createdAt: new Date().toISOString(),
+    };
+    setProfile(newProf);
+
+    // Initial baseline weigh-in log for this user
+    const initialLog: WeightLog = {
+      id: `log-${Date.now()}`,
+      userId: newProf.id,
+      weightKg: userData.weight,
+      bmi: initialBmi,
+      category: initialCat,
+      notes: 'Initial registration weigh-in',
+      loggedDate: today,
+    };
+    setWeightLogs([initialLog]);
+
     setActiveTab('dashboard');
   };
 
@@ -128,10 +177,14 @@ export default function Home() {
       await supabase.auth.signOut();
     }
     setIsLoggedIn(false);
+    setProfile(null);
+    setWeightLogs([]);
+    setCheckins([]);
     setActiveTab('home');
   };
 
   const handleAddWeightLog = (weightKg: number, notes?: string) => {
+    if (!profile) return;
     const today = new Date().toISOString().split('T')[0];
     const bmi = calculateBMI(weightKg, profile.heightCm);
     const category = getBMICategory(bmi);
@@ -151,10 +204,10 @@ export default function Home() {
       return [...filtered, newLog].sort((a, b) => a.loggedDate.localeCompare(b.loggedDate));
     });
 
-    setProfile((prev) => ({
+    setProfile((prev) => prev ? ({
       ...prev,
       currentWeightKg: weightKg,
-    }));
+    }) : null);
 
     // Async sync to Supabase
     const supabase = createClient();
@@ -173,6 +226,7 @@ export default function Home() {
   };
 
   const handleAddCheckin = (newCheckinData: Omit<DailyCheckin, 'id' | 'userId'>) => {
+    if (!profile) return;
     const newCheckin: DailyCheckin = {
       id: `chk-${Date.now()}`,
       userId: profile.id,
@@ -203,19 +257,19 @@ export default function Home() {
   };
 
   const handleUpdateReminder = (time: string, enabled: boolean) => {
-    setProfile((prev) => ({
+    setProfile((prev) => prev ? ({
       ...prev,
       dailyReminderTime: time,
       remindersEnabled: enabled,
-    }));
+    }) : null);
   };
 
   const handleEditProfileMetrics = (height: number, target: number) => {
-    setProfile((prev) => ({
+    setProfile((prev) => prev ? ({
       ...prev,
       heightCm: height,
       targetWeightKg: target,
-    }));
+    }) : null);
   };
 
   return (
@@ -224,11 +278,11 @@ export default function Home() {
       {/* Top Navbar */}
       <Navbar
         isLoggedIn={isLoggedIn}
-        userName={profile.fullName}
+        userName={profile?.fullName || 'Athlete'}
         activeTab={activeTab}
         onNavigate={(tab) => {
           if (tab === 'dashboard' && !isLoggedIn) {
-            handleOpenAuth('login');
+            handleOpenAuth('signup');
           } else {
             setActiveTab(tab);
           }
@@ -239,6 +293,8 @@ export default function Home() {
 
       {/* Main Content Area */}
       <main className="flex-1">
+        
+        {/* LANDING PAGE (First screen any visitor sees) */}
         {activeTab === 'home' && (
           <div>
             <Hero
@@ -252,7 +308,7 @@ export default function Home() {
               onOpenCalculator={() => setActiveTab('calculator')}
             />
 
-            {/* Quick Interactive BMI Widget on Landing Page */}
+            {/* Public Interactive BMI Widget */}
             <section className="py-16 px-4 bg-gradient-to-b from-transparent via-surface-subtle/30 to-background">
               <div className="max-w-7xl mx-auto text-center mb-8">
                 <span className="text-neon-lime text-xs font-black uppercase tracking-wider block mb-2">
@@ -263,11 +319,10 @@ export default function Home() {
                 </h2>
               </div>
               <BmiCalculatorWidget
-                initialHeight={profile.heightCm}
-                initialWeight={profile.currentWeightKg}
+                initialHeight={profile?.heightCm || 175}
+                initialWeight={profile?.currentWeightKg || 80}
                 onSaveToDashboard={(w, h) => {
-                  setProfile((prev) => ({ ...prev, currentWeightKg: w, heightCm: h }));
-                  if (isLoggedIn) {
+                  if (isLoggedIn && profile) {
                     handleAddWeightLog(w, 'Updated from BMI calculator');
                     setActiveTab('dashboard');
                   } else {
@@ -284,6 +339,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* BMI ADVISOR VIEW */}
         {activeTab === 'calculator' && (
           <div className="py-16 px-4 max-w-7xl mx-auto space-y-12">
             <div className="text-center max-w-2xl mx-auto space-y-3">
@@ -299,11 +355,10 @@ export default function Home() {
             </div>
 
             <BmiCalculatorWidget
-              initialHeight={profile.heightCm}
-              initialWeight={profile.currentWeightKg}
+              initialHeight={profile?.heightCm || 175}
+              initialWeight={profile?.currentWeightKg || 80}
               onSaveToDashboard={(w, h) => {
-                setProfile((prev) => ({ ...prev, currentWeightKg: w, heightCm: h }));
-                if (isLoggedIn) {
+                if (isLoggedIn && profile) {
                   handleAddWeightLog(w, 'Updated from calculator');
                   setActiveTab('dashboard');
                 } else {
@@ -316,7 +371,7 @@ export default function Home() {
             <div className="bg-surface border border-surface-border rounded-3xl p-8 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <h4 className="font-bold text-white uppercase text-sm flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-neon-lime" />
+                  <UserCheck className="w-4 h-4 text-neon-lime" />
                   <span>The Metric Standard</span>
                 </h4>
                 <p className="text-xs text-zinc-400 leading-relaxed">
@@ -326,7 +381,7 @@ export default function Home() {
 
               <div className="space-y-2">
                 <h4 className="font-bold text-white uppercase text-sm flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-accent-orange" />
+                  <Sparkles className="w-4 h-4 text-accent-orange" />
                   <span>Safe Fat Loss Rate</span>
                 </h4>
                 <p className="text-xs text-zinc-400 leading-relaxed">
@@ -336,7 +391,7 @@ export default function Home() {
 
               <div className="space-y-2">
                 <h4 className="font-bold text-white uppercase text-sm flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-accent-cyan" />
+                  <ShieldCheck className="w-4 h-4 text-accent-cyan" />
                   <span>Daily Accountability</span>
                 </h4>
                 <p className="text-xs text-zinc-400 leading-relaxed">
@@ -347,17 +402,50 @@ export default function Home() {
           </div>
         )}
 
+        {/* DASHBOARD VIEW (Compulsory Authentication Guard) */}
         {activeTab === 'dashboard' && (
-          <DashboardView
-            profile={profile}
-            weightLogs={weightLogs}
-            checkins={checkins}
-            onAddWeightLog={handleAddWeightLog}
-            onAddCheckin={handleAddCheckin}
-            onUpdateReminder={handleUpdateReminder}
-            onEditProfileMetrics={handleEditProfileMetrics}
-          />
+          <div>
+            {isLoggedIn && profile ? (
+              <DashboardView
+                profile={profile}
+                weightLogs={weightLogs}
+                checkins={checkins}
+                onAddWeightLog={handleAddWeightLog}
+                onAddCheckin={handleAddCheckin}
+                onUpdateReminder={handleUpdateReminder}
+                onEditProfileMetrics={handleEditProfileMetrics}
+              />
+            ) : (
+              <div className="py-24 px-4 max-w-xl mx-auto text-center space-y-6">
+                <div className="w-16 h-16 rounded-3xl bg-neon-lime/10 border border-neon-lime/30 flex items-center justify-center text-neon-lime mx-auto glow-lime-subtle">
+                  <Lock className="w-8 h-8" />
+                </div>
+                <h2 className="text-3xl font-black text-white uppercase">
+                  Authentication Required
+                </h2>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  To view and track your personal weight loss progress, BMI analytics, and daily habits, you must sign in or create an account.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
+                  <button
+                    onClick={() => handleOpenAuth('signup')}
+                    className="px-6 py-3.5 rounded-xl font-black uppercase text-xs tracking-wider bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon flex items-center justify-center gap-2"
+                  >
+                    <span>Register New Account</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleOpenAuth('login')}
+                    className="px-6 py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider bg-surface-subtle border border-surface-border text-white hover:bg-surface-hover"
+                  >
+                    Sign In Existing Account
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
+
       </main>
 
       {/* Global Auth Modal */}
@@ -389,11 +477,19 @@ export default function Home() {
             <div className="flex items-center gap-6 text-xs text-zinc-400">
               <button onClick={() => setActiveTab('home')} className="hover:text-neon-lime transition-colors">Overview</button>
               <button onClick={() => setActiveTab('calculator')} className="hover:text-neon-lime transition-colors">BMI Advisor</button>
-              <button onClick={() => setActiveTab('dashboard')} className="hover:text-neon-lime transition-colors">Member Tracker</button>
+              <button 
+                onClick={() => {
+                  if (isLoggedIn) setActiveTab('dashboard');
+                  else handleOpenAuth('signup');
+                }} 
+                className="hover:text-neon-lime transition-colors"
+              >
+                Member Tracker
+              </button>
               <span className="text-zinc-600">|</span>
               <span className="flex items-center gap-1 text-zinc-400">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                Supabase RLS Protected
+                Supabase Protected
               </span>
             </div>
 
