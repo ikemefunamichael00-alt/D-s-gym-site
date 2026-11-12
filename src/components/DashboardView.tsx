@@ -67,6 +67,25 @@ export default function DashboardView({
 
   const streakDays = checkins.length;
 
+  // Accessibility: scroll lock and Escape key handling for modals
+  React.useEffect(() => {
+    if (showLogModal || showCheckinModal) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setShowLogModal(false);
+          setShowCheckinModal(false);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [showLogModal, showCheckinModal]);
+
   const handleWeightSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddWeightLog(inputWeight, inputNotes);
@@ -656,8 +675,13 @@ export default function DashboardView({
             if (e.target === e.currentTarget) setShowLogModal(false);
           }}
         >
-          <div className="bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-8 max-w-md w-full relative my-auto max-h-[90vh] overflow-y-auto shadow-card">
-            <h3 className="text-token-md font-black text-white uppercase mb-2">Record Weigh-In</h3>
+          <div 
+            role="dialog" 
+            aria-modal="true" 
+            aria-labelledby="weigh-in-modal-title"
+            className="bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-8 max-w-md w-full relative my-auto max-h-[90vh] overflow-y-auto shadow-card"
+          >
+            <h3 id="weigh-in-modal-title" className="text-token-md font-black text-white uppercase mb-2">Record Weigh-In</h3>
             <p className="text-token-xs text-zinc-400 mb-6">Enter today&apos;s weight in kilograms.</p>
 
             <form onSubmit={handleWeightSubmit} className="space-y-4">
@@ -718,8 +742,13 @@ export default function DashboardView({
             if (e.target === e.currentTarget) setShowCheckinModal(false);
           }}
         >
-          <div className="bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-8 max-w-md w-full relative my-auto max-h-[90vh] overflow-y-auto shadow-card">
-            <h3 className="text-token-md font-black text-white uppercase mb-2">Daily Check-In</h3>
+          <div 
+            role="dialog" 
+            aria-modal="true" 
+            aria-labelledby="checkin-modal-title"
+            className="bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-8 max-w-md w-full relative my-auto max-h-[90vh] overflow-y-auto shadow-card"
+          >
+            <h3 id="checkin-modal-title" className="text-token-md font-black text-white uppercase mb-2">Daily Check-In</h3>
             <p className="text-token-xs text-zinc-400 mb-6">Track your daily universal workouts and hydration.</p>
 
             <form onSubmit={handleCheckinSubmit} className="space-y-4">

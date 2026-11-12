@@ -51,6 +51,16 @@ const config: Config = {
         'token-xs': '8px',
         'token-sm': '9999px',
       },
+      spacing: {
+        'token-1': '2px',
+        'token-2': '4px',
+        'token-3': '6px',
+        'token-4': '8px',
+        'token-5': '10px',
+        'token-6': '12px',
+        'token-7': '16px',
+        'token-8': '24px',
+      },
       boxShadow: {
         'token-1': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
         'coral': '0 0 25px -4px rgba(255, 107, 107, 0.45)',

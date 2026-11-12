@@ -28,16 +28,23 @@ export default function AuthModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
 
-  // Lock background body scroll when modal is open so only the modal scrolls
+  // Lock background body scroll and bind Escape key when modal is open
   useEffect(() => {
     if (isOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
       return () => {
         document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     setMode(initialMode);
@@ -131,7 +138,12 @@ export default function AuthModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-lg bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-8 shadow-card my-auto max-h-[92vh] overflow-y-auto overscroll-contain">
+      <div 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="auth-modal-title"
+        className="relative w-full max-w-lg bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-8 shadow-card my-auto max-h-[92vh] overflow-y-auto overscroll-contain"
+      >
         
         {/* Glow */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-brand-coral/10 blur-[80px] pointer-events-none" />
@@ -151,7 +163,7 @@ export default function AuthModal({
           <div className="w-12 h-12 rounded-token-xs bg-brand-coral/15 border border-brand-coral/30 flex items-center justify-center text-brand-coral mx-auto mb-3 glow-coral-subtle">
             <Lock className="w-6 h-6" />
           </div>
-          <h3 className="text-token-xl font-black uppercase text-white tracking-tight">
+          <h3 id="auth-modal-title" className="text-token-xl font-black uppercase text-white tracking-tight">
             {mode === 'signup' ? 'Join anygym Universal' : 'Welcome Back, Athlete'}
           </h3>
           <p className="text-token-xs text-zinc-400 mt-1">
