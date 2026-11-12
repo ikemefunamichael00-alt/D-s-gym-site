@@ -20,7 +20,6 @@ import {
   Sparkles, 
   ChevronRight, 
   RotateCcw, 
-  TrendingUp, 
   Dumbbell,
   Apple,
   Info
@@ -38,13 +37,11 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
   const [completedDays, setCompletedDays] = useState<number[]>([]);
   const [selectedDayDetail, setSelectedDayDetail] = useState<DayRoutine | null>(null);
 
-  // Generate initial plan on mount
   useEffect(() => {
     const generated = generate30DayPlan(selectedBodyType, selectedGoal);
     setPlan(generated);
     setSelectedDayDetail(generated.weeklySchedule[0].days[0]);
 
-    // Load completed days from localStorage
     const saved = localStorage.getItem(`completed_days_${generated.id}`);
     if (saved) {
       try {
@@ -82,33 +79,33 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
       
       {/* Page Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-subtle border border-neon-lime/30 text-neon-lime text-xs font-bold uppercase tracking-wider glow-lime-subtle">
-          <Calendar className="w-3.5 h-3.5 text-neon-lime" />
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-token-sm bg-surface-card border border-brand-coral/40 text-brand-coral text-token-xs font-bold uppercase tracking-wider glow-coral-subtle">
+          <Calendar className="w-3.5 h-3.5 text-brand-coral" />
           <span>Scientific 30-Day Periodization</span>
         </div>
-        <h1 className="text-4xl sm:text-5xl font-black text-white uppercase tracking-tight">
-          Custom <span className="text-neon-lime">30-Day Workout</span> Planner
+        <h1 className="text-4xl sm:text-token-2xl font-black text-white uppercase tracking-tight">
+          Custom <span className="text-brand-coral">30-Day Workout</span> Planner
         </h1>
-        <p className="text-zinc-400 text-base leading-relaxed">
-          Select your current starting body physique and desired transformation outcome. Our engine calculates your exact sets, reps, rest intervals, and daily nutrition targets.
+        <p className="text-zinc-400 text-token-xs sm:text-token-sm leading-relaxed">
+          Select your current starting physique and desired transformation outcome. Our engine calculates your exact sets, reps, rest intervals, and daily nutrition targets.
         </p>
       </div>
 
       {/* STEP 1: Select Body Type with Interactive Animations */}
-      <div className="bg-surface border border-surface-border rounded-3xl p-6 sm:p-10 shadow-card">
+      <div className="bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-10 shadow-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-surface-border">
           <div>
-            <span className="text-xs font-black uppercase text-neon-lime tracking-wider block">
+            <span className="text-token-xs font-black uppercase text-brand-coral tracking-wider block">
               Step 1 of 2
             </span>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+            <h2 className="text-token-xl font-black text-white uppercase tracking-tight">
               Select Your Current Body Type
             </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-token-xs text-zinc-400 mt-0.5">
               Each body type requires different training volume, metabolic pacing, and joint safety protocols.
             </p>
           </div>
-          <span className="text-xs font-bold text-zinc-400">
+          <span className="text-token-xs font-bold text-zinc-400">
             Current: <strong className="text-white uppercase">{selectedBodyType}</strong>
           </span>
         </div>
@@ -121,16 +118,16 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
       </div>
 
       {/* STEP 2: Select 30-Day Goal */}
-      <div className="bg-surface border border-surface-border rounded-3xl p-6 sm:p-10 shadow-card">
+      <div className="bg-surface-card border border-surface-border rounded-token-xs p-6 sm:p-10 shadow-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-surface-border mb-6">
           <div>
-            <span className="text-xs font-black uppercase text-accent-cyan tracking-wider block">
+            <span className="text-token-xs font-black uppercase text-accent-cyan tracking-wider block">
               Step 2 of 2
             </span>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+            <h2 className="text-token-xl font-black text-white uppercase tracking-tight">
               Select Your 30-Day Transformation Goal
             </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-token-xs text-zinc-400 mt-0.5">
               Choose your primary training objective to configure daily exercise splits.
             </p>
           </div>
@@ -141,25 +138,29 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
             <div
               key={g.id}
               onClick={() => setSelectedGoal(g.id)}
-              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between group ${
+              className={`p-5 rounded-token-xs border-2 cursor-pointer transition-all duration-fast flex flex-col justify-between group ${
                 selectedGoal === g.id
-                  ? 'bg-surface-subtle border-neon-lime shadow-neon ring-1 ring-neon-lime/40'
+                  ? 'bg-surface-subtle border-brand-coral shadow-coral ring-1 ring-brand-coral/40'
                   : 'bg-surface-subtle/50 border-surface-border hover:border-zinc-500 hover:bg-surface-subtle'
               }`}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedGoal(g.id); }}
+              aria-pressed={selectedGoal === g.id}
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-surface border border-surface-border text-neon-lime">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-token-sm bg-surface-card border border-surface-border text-brand-coral">
                     {g.badge}
                   </span>
                   {selectedGoal === g.id && (
-                    <CheckCircle2 className="w-4 h-4 text-neon-lime" />
+                    <CheckCircle2 className="w-4 h-4 text-brand-coral" />
                   )}
                 </div>
-                <h3 className="text-base font-black uppercase text-white group-hover:text-neon-lime transition-colors">
+                <h3 className="text-token-sm font-black uppercase text-white group-hover:text-brand-coral transition-colors duration-instant">
                   {g.title}
                 </h3>
-                <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                <p className="text-[12px] text-zinc-400 mt-2 leading-relaxed">
                   {g.description}
                 </p>
               </div>
@@ -176,26 +177,26 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
         <div className="space-y-8 animate-in fade-in duration-300">
           
           {/* Plan Summary Banner */}
-          <div className="bg-gradient-to-r from-surface via-surface-subtle to-surface border-2 border-surface-border rounded-3xl p-6 sm:p-8 shadow-card relative overflow-hidden">
+          <div className="bg-gradient-to-r from-surface-card via-surface-subtle to-surface-card border-2 border-surface-border rounded-token-xs p-6 sm:p-8 shadow-card relative overflow-hidden">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
               <div className="space-y-3 flex-1">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="px-3 py-1 rounded-xl bg-neon-lime/10 text-neon-lime text-xs font-black uppercase border border-neon-lime/30">
+                  <span className="px-3 py-1 rounded-token-sm bg-brand-coral/15 text-brand-coral text-token-xs font-black uppercase border border-brand-coral/30">
                     {plan.goalTitle}
                   </span>
-                  <span className="px-3 py-1 rounded-xl bg-surface-subtle text-zinc-300 text-xs font-bold uppercase border border-surface-border">
+                  <span className="px-3 py-1 rounded-token-sm bg-surface-subtle text-zinc-300 text-token-xs font-bold uppercase border border-surface-border">
                     {plan.bodyTypeTitle}
                   </span>
                 </div>
 
-                <h3 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
+                <h3 className="text-token-xl sm:text-token-2xl font-black text-white uppercase tracking-tight">
                   Your 30-Day Transformation Protocol
                 </h3>
-                <p className="text-zinc-300 text-sm leading-relaxed max-w-3xl">
+                <p className="text-zinc-300 text-token-xs leading-relaxed max-w-3xl">
                   {plan.summary}
                 </p>
 
-                <div className="pt-1 flex flex-wrap items-center gap-6 text-xs text-zinc-400">
+                <div className="pt-1 flex flex-wrap items-center gap-6 text-token-xs text-zinc-400">
                   <div className="flex items-center gap-2">
                     <Apple className="w-4 h-4 text-emerald-400" />
                     <span>Nutrition Guidance: <strong className="text-white">{plan.recommendedCaloricPace}</strong></span>
@@ -208,22 +209,22 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
               </div>
 
               {/* Progress Ring Widget */}
-              <div className="bg-surface-subtle/80 border border-surface-border p-6 rounded-2xl flex flex-col items-center text-center shrink-0 min-w-[200px]">
-                <span className="text-xs uppercase font-bold text-zinc-400 mb-1">Challenge Progress</span>
-                <span className="text-4xl font-black text-neon-lime">{progressPercent}%</span>
-                <span className="text-xs text-zinc-300 font-semibold mt-1">
-                  {totalCompleted} of 30 Days Completed
+              <div className="bg-surface-subtle/80 border border-surface-border p-6 rounded-token-xs flex flex-col items-center text-center shrink-0 min-w-[200px]">
+                <span className="text-[11px] uppercase font-bold text-zinc-400 mb-1">Challenge Progress</span>
+                <span className="text-token-2xl font-black text-brand-coral">{progressPercent}%</span>
+                <span className="text-[12px] text-zinc-300 font-semibold mt-1">
+                  {totalCompleted} of 30 Days Done
                 </span>
-                <div className="w-full bg-surface h-2 rounded-full mt-3 overflow-hidden border border-surface-border">
+                <div className="w-full bg-surface-card h-2 rounded-token-sm mt-3 overflow-hidden border border-surface-border">
                   <div
-                    className="bg-neon-lime h-full rounded-full transition-all duration-500 shadow-neon"
+                    className="bg-brand-coral h-full rounded-token-sm transition-all duration-fast shadow-coral"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
                 {totalCompleted > 0 && (
                   <button
                     onClick={handleResetProgress}
-                    className="mt-3 text-[10px] text-zinc-500 hover:text-rose-400 flex items-center gap-1 transition-colors"
+                    className="mt-3 text-[10px] text-zinc-500 hover:text-rose-400 flex items-center gap-1 transition-colors duration-instant"
                   >
                     <RotateCcw className="w-3 h-3" />
                     <span>Reset Progress</span>
@@ -233,15 +234,15 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
             </div>
           </div>
 
-          {/* Week Selection Tabs */}
-          <div className="flex gap-2 p-1.5 bg-surface rounded-2xl border border-surface-border overflow-x-auto">
+          {/* Week Selection Tabs (radius.sm=9999px pills) */}
+          <div className="flex gap-2 p-1.5 bg-surface-card rounded-token-sm border border-surface-border overflow-x-auto">
             {plan.weeklySchedule.map((w) => (
               <button
                 key={w.week}
                 onClick={() => setActiveWeek(w.week)}
-                className={`flex-1 min-w-[130px] py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-center ${
+                className={`flex-1 min-w-[130px] py-3 px-4 rounded-token-sm font-bold text-token-xs uppercase tracking-wider transition-all duration-instant text-center ${
                   activeWeek === w.week
-                    ? 'bg-neon-lime text-background shadow-neon font-black'
+                    ? 'bg-brand-coral text-white shadow-coral font-black'
                     : 'text-zinc-400 hover:text-white hover:bg-surface-subtle'
                 }`}
               >
@@ -258,13 +259,13 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
             const currentWeekData = plan.weeklySchedule.find((w) => w.week === activeWeek)!;
             return (
               <div className="space-y-6">
-                <div className="bg-surface/50 border border-surface-border p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="bg-surface-card/60 border border-surface-border p-4 rounded-token-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h4 className="text-lg font-black text-white uppercase">{currentWeekData.weekTitle}</h4>
-                    <p className="text-xs text-zinc-400">{currentWeekData.description}</p>
+                    <h4 className="text-token-md font-black text-white uppercase">{currentWeekData.weekTitle}</h4>
+                    <p className="text-token-xs text-zinc-400">{currentWeekData.description}</p>
                   </div>
-                  <span className="text-xs font-semibold text-neon-lime shrink-0">
-                    Click any day card to view the exact exercises
+                  <span className="text-token-xs font-semibold text-brand-coral shrink-0">
+                    Click any day card to view exercises
                   </span>
                 </div>
 
@@ -277,27 +278,31 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
                       <div
                         key={day.day}
                         onClick={() => setSelectedDayDetail(day)}
-                        className={`p-6 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        className={`p-6 rounded-token-xs border-2 transition-all duration-fast cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? 'bg-surface border-neon-lime shadow-card ring-1 ring-neon-lime/40'
+                            ? 'bg-surface-card border-brand-coral shadow-coral ring-1 ring-brand-coral/40'
                             : isCompleted
-                            ? 'bg-surface/90 border-emerald-500/40'
-                            : 'bg-surface/60 border-surface-border hover:border-zinc-500 hover:bg-surface'
+                            ? 'bg-surface-card/90 border-emerald-500/40'
+                            : 'bg-surface-card/60 border-surface-border hover:border-zinc-500 hover:bg-surface-card'
                         }`}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDayDetail(day); }}
+                        aria-pressed={isSelected}
                       >
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-black uppercase text-neon-lime tracking-wider">
+                            <span className="text-token-xs font-black uppercase text-brand-coral tracking-wider">
                               Day {day.day}
                             </span>
                             <div className="flex items-center gap-2">
                               {day.isRest ? (
-                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-surface-subtle text-accent-cyan border border-surface-border">
+                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-token-sm bg-surface-subtle text-accent-cyan border border-surface-border">
                                   Recovery
                                 </span>
                               ) : (
-                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-surface-subtle text-accent-orange border border-surface-border flex items-center gap-1">
-                                  <Flame className="w-3 h-3 text-accent-orange" />
+                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-token-sm bg-surface-subtle text-brand-coral border border-surface-border flex items-center gap-1">
+                                  <Flame className="w-3 h-3 text-brand-coral" />
                                   ~{day.estCaloriesBurned} kcal
                                 </span>
                               )}
@@ -305,10 +310,10 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
                           </div>
 
                           <div>
-                            <h4 className="text-base font-bold text-white leading-snug">
+                            <h4 className="text-token-sm font-bold text-white leading-snug">
                               {day.title.replace(`Day ${day.day}: `, '')}
                             </h4>
-                            <div className="flex items-center gap-3 text-xs text-zinc-400 mt-2">
+                            <div className="flex items-center gap-3 text-token-xs text-zinc-400 mt-2">
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3.5 h-3.5 text-zinc-500" />
                                 {day.durationMin} mins
@@ -316,7 +321,7 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
                               {!day.isRest && (
                                 <span className="flex items-center gap-1">
                                   <Dumbbell className="w-3.5 h-3.5 text-zinc-500" />
-                                  {day.exercises.length} Exercises
+                                  {day.exercises.length} Movements
                                 </span>
                               )}
                             </div>
@@ -331,18 +336,18 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
                               e.stopPropagation();
                               handleToggleDayComplete(day.day);
                             }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                            className={`px-3 py-1.5 rounded-token-xs text-token-xs font-bold transition-all duration-instant flex items-center gap-2 ${
                               isCompleted
                                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30'
                                 : 'bg-surface-subtle text-zinc-400 hover:text-white border border-surface-border hover:bg-surface-hover'
                             }`}
                           >
                             <CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-emerald-400' : 'text-zinc-500'}`} />
-                            <span>{isCompleted ? 'Completed' : 'Mark Done'}</span>
+                            <span>{isCompleted ? 'Done' : 'Mark Done'}</span>
                           </button>
 
-                          <span className="text-xs text-zinc-400 flex items-center gap-1 group-hover:text-neon-lime">
-                            <span>Details</span>
+                          <span className="text-token-xs text-zinc-400 flex items-center gap-1 group-hover:text-brand-coral">
+                            <span>View</span>
                             <ChevronRight className="w-4 h-4" />
                           </span>
                         </div>
@@ -356,27 +361,27 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
 
           {/* Detailed Exercise Breakdown of Selected Day */}
           {selectedDayDetail && (
-            <div className="bg-surface border-2 border-surface-border rounded-3xl p-6 sm:p-10 shadow-card space-y-8 animate-in fade-in duration-200">
+            <div className="bg-surface-card border-2 border-surface-border rounded-token-xs p-6 sm:p-10 shadow-card space-y-8 animate-in fade-in duration-fast">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-surface-border">
                 <div>
-                  <div className="flex items-center gap-2 text-neon-lime text-xs font-bold uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-2 text-brand-coral text-token-xs font-bold uppercase tracking-wider mb-1">
                     <Sparkles className="w-4 h-4" />
-                    <span>Day {selectedDayDetail.day} Detailed Exercise Routine</span>
+                    <span>Day {selectedDayDetail.day} Detailed Movement Guide</span>
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-black text-white uppercase">
+                  <h3 className="text-token-xl sm:text-token-2xl font-black text-white uppercase">
                     {selectedDayDetail.title}
                   </h3>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    Duration: <strong className="text-white">{selectedDayDetail.durationMin} minutes</strong> • Estimated Burn: <strong className="text-neon-lime">~{selectedDayDetail.estCaloriesBurned} kcal</strong>
+                  <p className="text-token-xs text-zinc-400 mt-1">
+                    Duration: <strong className="text-white">{selectedDayDetail.durationMin} minutes</strong> • Target Burn: <strong className="text-brand-coral">~{selectedDayDetail.estCaloriesBurned} kcal</strong>
                   </p>
                 </div>
 
                 <button
                   onClick={() => handleToggleDayComplete(selectedDayDetail.day)}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 ${
+                  className={`px-5 py-2.5 rounded-token-xs text-token-xs font-black uppercase tracking-wider transition-all duration-instant flex items-center gap-2 shrink-0 ${
                     completedDays.includes(selectedDayDetail.day)
                       ? 'bg-emerald-500 text-black shadow-md'
-                      : 'bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon'
+                      : 'bg-brand-coral text-white hover:bg-brand-coralHover shadow-coral'
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4 stroke-[3]" />
@@ -388,18 +393,18 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
 
               {/* Exercises List */}
               {selectedDayDetail.isRest ? (
-                <div className="p-8 rounded-2xl bg-surface-subtle/50 border border-surface-border text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-accent-cyan/15 border border-accent-cyan/30 flex items-center justify-center text-accent-cyan mx-auto">
+                <div className="p-8 rounded-token-xs bg-surface-subtle/50 border border-surface-border text-center space-y-3">
+                  <div className="w-12 h-12 rounded-token-xs bg-accent-cyan/15 border border-accent-cyan/30 flex items-center justify-center text-accent-cyan mx-auto">
                     <Sparkles className="w-6 h-6" />
                   </div>
-                  <h4 className="text-lg font-bold text-white uppercase">Active Recovery &amp; Muscle Repair</h4>
-                  <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-                    No heavy resistance training today. Take a 20-30 minute relaxed outdoor walk, perform gentle hamstring &amp; hip flexor stretching, and drink at least 3.5 liters of clean water.
+                  <h4 className="text-token-md font-bold text-white uppercase">Active Recovery &amp; Mobility</h4>
+                  <p className="text-token-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+                    No heavy resistance training today. Take a 25-minute relaxed outdoor walk or light spin, perform gentle mobility stretching, and hydrate with 3.5+ liters of clean water.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between text-xs uppercase font-bold text-zinc-400 pb-2 border-b border-surface-border">
+                  <div className="flex items-center justify-between text-token-xs uppercase font-bold text-zinc-400 pb-2 border-b border-surface-border">
                     <span>Exercise Movement</span>
                     <span>Prescription</span>
                   </div>
@@ -409,24 +414,24 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
                       <div key={exIdx} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
                         <div className="space-y-1">
                           <div className="flex items-center gap-3">
-                            <span className="w-6 h-6 rounded-lg bg-surface-subtle border border-surface-border text-neon-lime text-xs font-black flex items-center justify-center shrink-0">
+                            <span className="w-6 h-6 rounded-token-xs bg-surface-subtle border border-surface-border text-brand-coral text-token-xs font-black flex items-center justify-center shrink-0">
                               {exIdx + 1}
                             </span>
-                            <span className="font-bold text-white text-base group-hover:text-neon-lime transition-colors">
+                            <span className="font-bold text-white text-token-sm group-hover:text-brand-coral transition-colors duration-instant">
                               {ex.name}
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-400 pl-9 flex items-center gap-1.5">
+                          <p className="text-token-xs text-zinc-400 pl-9 flex items-center gap-1.5">
                             <Info className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                             <span>Form Cue: {ex.tip}</span>
                           </p>
                         </div>
 
-                        <div className="pl-9 sm:pl-0 flex items-center gap-4 text-xs font-semibold">
-                          <span className="px-3 py-1 rounded-xl bg-surface-subtle border border-surface-border text-white">
+                        <div className="pl-9 sm:pl-0 flex items-center gap-4 text-token-xs font-semibold">
+                          <span className="px-3 py-1 rounded-token-xs bg-surface-subtle border border-surface-border text-white">
                             {ex.sets} Sets × {ex.reps}
                           </span>
-                          <span className="px-3 py-1 rounded-xl bg-surface-subtle border border-surface-border text-zinc-400">
+                          <span className="px-3 py-1 rounded-token-xs bg-surface-subtle border border-surface-border text-zinc-400">
                             {ex.restSec}s Rest
                           </span>
                         </div>
@@ -437,13 +442,13 @@ export default function WorkoutPlanView({ onJoinClick }: WorkoutPlanViewProps) {
               )}
 
               {/* Nutrition Tip Box */}
-              <div className="p-5 rounded-2xl bg-surface-subtle border border-neon-lime/30 flex items-start gap-3">
-                <Apple className="w-5 h-5 text-neon-lime shrink-0 mt-0.5" />
+              <div className="p-5 rounded-token-xs bg-surface-subtle border border-brand-coral/30 flex items-start gap-3">
+                <Apple className="w-5 h-5 text-brand-coral shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <span className="text-xs font-black uppercase tracking-wider text-neon-lime block">
+                  <span className="text-token-xs font-black uppercase tracking-wider text-brand-coral block">
                     Daily Nutrition &amp; Metabolism Tip
                   </span>
-                  <p className="text-xs text-zinc-300 leading-relaxed">
+                  <p className="text-token-xs text-zinc-300 leading-relaxed">
                     {selectedDayDetail.dailyNutritionTip}
                   </p>
                 </div>

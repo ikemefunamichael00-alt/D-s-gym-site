@@ -11,16 +11,15 @@ import AuthModal from '@/components/AuthModal';
 import { UserProfile, WeightLog, DailyCheckin } from '@/types';
 import { calculateBMI, getBMICategory } from '@/lib/bmi';
 import { createClient } from '@/lib/supabase/client';
-import { Dumbbell, ShieldCheck, Sparkles, Lock, ArrowRight, UserCheck, Calendar } from 'lucide-react';
+import { Dumbbell, ShieldCheck, Sparkles, Lock, ArrowRight, UserCheck, Calendar, Globe } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'calculator' | 'workout-plan'>('home');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false); // MUST be false for first time user
-  const [profile, setProfile] = useState<UserProfile | null>(null); // NO demo user
-  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]); // NO demo logs
-  const [checkins, setCheckins] = useState<DailyCheckin[]>([]); // NO demo checkins
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
+  const [checkins, setCheckins] = useState<DailyCheckin[]>([]);
   
-  // Auth modal state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
 
@@ -29,7 +28,6 @@ export default function Home() {
     const supabase = createClient();
     if (!supabase) return;
 
-    // Check existing active Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setIsLoggedIn(true);
@@ -40,7 +38,7 @@ export default function Home() {
 
         const userProf: UserProfile = {
           id: session.user.id,
-          email: session.user.email || 'athlete@dsgym.com',
+          email: session.user.email || 'athlete@anygym.com',
           fullName: meta.full_name || 'Gym Athlete',
           heightCm: registeredHeight,
           startingWeightKg: registeredWeight,
@@ -49,12 +47,11 @@ export default function Home() {
           gender: 'unspecified',
           dailyReminderTime: '08:00',
           remindersEnabled: true,
-          membershipTier: 'Standard Member',
+          membershipTier: 'Universal Pass Holder',
           createdAt: session.user.created_at,
         };
         setProfile(userProf);
 
-        // Fetch user's live logs from Supabase
         supabase.from('weight_logs').select('*').eq('user_id', session.user.id).order('logged_date', { ascending: true })
           .then(({ data: logs }) => {
             if (logs && logs.length > 0) {
@@ -78,7 +75,7 @@ export default function Home() {
                 weightKg: registeredWeight,
                 bmi: initialBmi,
                 category: initialCat,
-                notes: 'Initial registration weigh-in',
+                notes: 'Initial enrollment weigh-in',
                 loggedDate: new Date().toISOString().split('T')[0],
               };
               setWeightLogs([initialLog]);
@@ -150,7 +147,7 @@ export default function Home() {
       gender: 'unspecified',
       dailyReminderTime: '08:00',
       remindersEnabled: true,
-      membershipTier: 'Standard Member',
+      membershipTier: 'Universal Pass Holder',
       createdAt: new Date().toISOString(),
     };
     setProfile(newProf);
@@ -161,7 +158,7 @@ export default function Home() {
       weightKg: userData.weight,
       bmi: initialBmi,
       category: initialCat,
-      notes: 'Initial registration weigh-in',
+      notes: 'Initial enrollment weigh-in',
       loggedDate: today,
     };
     setWeightLogs([initialLog]);
@@ -269,7 +266,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-zinc-100 flex flex-col justify-between selection:bg-neon-lime selection:text-background">
+    <div className="min-h-screen bg-surface-base text-zinc-100 flex flex-col justify-between selection:bg-brand-coral selection:text-white">
       
       {/* Top Navbar */}
       <Navbar
@@ -302,15 +299,16 @@ export default function Home() {
                 }
               }}
               onOpenCalculator={() => setActiveTab('calculator')}
+              onOpenPlanner={() => setActiveTab('workout-plan')}
             />
 
             {/* Public Interactive BMI Widget */}
-            <section className="py-16 px-4 bg-gradient-to-b from-transparent via-surface-subtle/30 to-background">
+            <section className="py-16 px-4 bg-gradient-to-b from-transparent via-surface-card/40 to-surface-base">
               <div className="max-w-7xl mx-auto text-center mb-8">
-                <span className="text-neon-lime text-xs font-black uppercase tracking-wider block mb-2">
-                  Interactive Health Gauge
+                <span className="text-brand-coral text-token-xs font-black uppercase tracking-wider block mb-2">
+                  Clinical Metric Gauge
                 </span>
-                <h2 className="text-3xl font-black text-white uppercase">
+                <h2 className="text-3xl sm:text-token-2xl font-black text-white uppercase">
                   Test Your Kilograms &amp; Target Advice
                 </h2>
               </div>
@@ -330,27 +328,27 @@ export default function Home() {
 
             {/* 30-Day Transformation Challenge Teaser Banner on Landing Page */}
             <section className="py-12 px-4 max-w-7xl mx-auto">
-              <div className="bg-gradient-to-r from-surface via-surface-subtle to-surface border-2 border-neon-lime/30 rounded-3xl p-8 sm:p-12 shadow-card flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-neon-lime/10 blur-[100px] pointer-events-none" />
+              <div className="bg-gradient-to-r from-surface-card via-surface-subtle to-surface-card border-2 border-brand-coral/40 rounded-token-xs p-8 sm:p-12 shadow-card flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-brand-coral/10 blur-[100px] pointer-events-none" />
                 <div className="space-y-4 max-w-2xl relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon-lime/10 border border-neon-lime/30 text-neon-lime text-xs font-bold uppercase tracking-wider">
-                    <Sparkles className="w-3.5 h-3.5" />
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-token-sm bg-brand-coral/15 border border-brand-coral/30 text-brand-coral text-token-xs font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-brand-coral" />
                     <span>30-Day Visual Physique Planner</span>
                   </div>
-                  <h2 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight">
-                    Personalized 30-Day Workout Plans For Every Body Type
+                  <h2 className="text-3xl sm:text-token-2xl font-black text-white uppercase tracking-tight">
+                    Custom 30-Day Workout Plans For Every Body Type
                   </h2>
-                  <p className="text-zinc-300 text-sm leading-relaxed">
-                    Choose your starting physique from 3 interactive animated body models (excess weight &amp; big stomach, medium build, or slim frame). Generate an exact day-by-day protocol to lose overall weight, burn belly fat, sculpt 6-pack abs, or pack on muscle mass.
+                  <p className="text-zinc-300 text-token-xs sm:text-token-sm leading-relaxed">
+                    Choose your starting physique from 3 animated models (excess weight &amp; big stomach, medium build, or slim frame). Generate an exact day-by-day protocol to lose overall weight, burn belly fat, sculpt 6-pack abs, or pack on muscle mass.
                   </p>
-                  <div className="flex flex-wrap gap-3 pt-2 text-xs font-semibold text-zinc-400">
-                    <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-accent-orange">
+                  <div className="flex flex-wrap gap-3 pt-2 text-token-xs font-semibold text-zinc-400">
+                    <span className="px-3 py-1.5 rounded-token-xs bg-surface-card border border-surface-border text-brand-coral">
                       🔥 Big Stomach &amp; Heavy Build
                     </span>
-                    <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-neon-lime">
+                    <span className="px-3 py-1.5 rounded-token-xs bg-surface-card border border-surface-border text-accent-orange">
                       ⚡ Medium Athletic Build
                     </span>
-                    <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-accent-cyan">
+                    <span className="px-3 py-1.5 rounded-token-xs bg-surface-card border border-surface-border text-accent-cyan">
                       💪 Slim Hypertrophy Build
                     </span>
                   </div>
@@ -358,16 +356,16 @@ export default function Home() {
 
                 <button
                   onClick={() => setActiveTab('workout-plan')}
-                  className="px-8 py-4 rounded-xl font-black uppercase text-sm tracking-wider bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon transition-all flex items-center gap-3 shrink-0 transform hover:-translate-y-0.5 relative z-10"
+                  className="px-8 py-4 rounded-token-xs font-black uppercase text-token-xs tracking-wider bg-brand-coral text-white hover:bg-brand-coralHover shadow-coral transition-all duration-instant flex items-center gap-3 shrink-0 transform hover:-translate-y-0.5 relative z-10"
                 >
-                  <Calendar className="w-5 h-5 text-background" />
+                  <Calendar className="w-5 h-5 text-white" />
                   <span>Generate 30-Day Plan</span>
                   <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </section>
 
-            {/* Gym Classes & Pricing */}
+            {/* Universal Memberships & How It Works */}
             <GymFeatures
               onJoinClick={() => handleOpenAuth('signup')}
             />
@@ -385,13 +383,13 @@ export default function Home() {
         {activeTab === 'calculator' && (
           <div className="py-16 px-4 max-w-7xl mx-auto space-y-12">
             <div className="text-center max-w-2xl mx-auto space-y-3">
-              <span className="text-neon-lime text-xs font-bold uppercase tracking-wider">
+              <span className="text-brand-coral text-token-xs font-bold uppercase tracking-wider">
                 WHO Clinical Reference
               </span>
-              <h1 className="text-4xl font-black text-white uppercase">
+              <h1 className="text-4xl sm:text-token-2xl font-black text-white uppercase">
                 BMI &amp; Weight Loss Advisory Center
               </h1>
-              <p className="text-zinc-400 text-sm">
+              <p className="text-zinc-400 text-token-xs">
                 Understand your Body Mass Index score, healthy ranges for your height in cm, and the scientific rate of recommended weight loss.
               </p>
             </div>
@@ -410,33 +408,33 @@ export default function Home() {
             />
 
             {/* Educational Info Card */}
-            <div className="bg-surface border border-surface-border rounded-3xl p-8 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-surface-card border border-surface-border rounded-token-xs p-8 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <h4 className="font-bold text-white uppercase text-sm flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-neon-lime" />
+                <h4 className="font-bold text-white uppercase text-token-xs flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-brand-coral" />
                   <span>The Metric Standard</span>
                 </h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">
+                <p className="text-[12px] text-zinc-400 leading-relaxed">
                   Calculated by taking weight in kilograms divided by the square of height in meters: BMI = weight (kg) / (height in meters)².
                 </p>
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-bold text-white uppercase text-sm flex items-center gap-2">
+                <h4 className="font-bold text-white uppercase text-token-xs flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-accent-orange" />
                   <span>Safe Fat Loss Rate</span>
                 </h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">
+                <p className="text-[12px] text-zinc-400 leading-relaxed">
                   Losing 0.5 kg to 1.0 kg per week protects lean skeletal muscle mass while optimizing fat metabolism and metabolic health.
                 </p>
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-bold text-white uppercase text-sm flex items-center gap-2">
+                <h4 className="font-bold text-white uppercase text-token-xs flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-accent-cyan" />
                   <span>Daily Accountability</span>
                 </h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">
+                <p className="text-[12px] text-zinc-400 leading-relaxed">
                   Consistency beats intensity. Weighing in daily smooths out hydration fluctuations and reinforces healthy habits.
                 </p>
               </div>
@@ -459,26 +457,26 @@ export default function Home() {
               />
             ) : (
               <div className="py-24 px-4 max-w-xl mx-auto text-center space-y-6">
-                <div className="w-16 h-16 rounded-3xl bg-neon-lime/10 border border-neon-lime/30 flex items-center justify-center text-neon-lime mx-auto glow-lime-subtle">
+                <div className="w-16 h-16 rounded-token-xs bg-brand-coral/15 border border-brand-coral/30 flex items-center justify-center text-brand-coral mx-auto glow-coral-subtle">
                   <Lock className="w-8 h-8" />
                 </div>
-                <h2 className="text-3xl font-black text-white uppercase">
+                <h2 className="text-token-xl font-black text-white uppercase">
                   Authentication Required
                 </h2>
-                <p className="text-zinc-400 text-sm leading-relaxed">
+                <p className="text-zinc-400 text-token-xs leading-relaxed">
                   To view and track your personal weight loss progress, BMI analytics, and daily habits, you must sign in or create an account.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
                   <button
                     onClick={() => handleOpenAuth('signup')}
-                    className="px-6 py-3.5 rounded-xl font-black uppercase text-xs tracking-wider bg-neon-lime text-background hover:bg-neon-limeHover shadow-neon flex items-center justify-center gap-2"
+                    className="px-6 py-3.5 rounded-token-xs font-black uppercase text-token-xs tracking-wider bg-brand-coral text-white hover:bg-brand-coralHover shadow-coral flex items-center justify-center gap-2"
                   >
                     <span>Register New Account</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleOpenAuth('login')}
-                    className="px-6 py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider bg-surface-subtle border border-surface-border text-white hover:bg-surface-hover"
+                    className="px-6 py-3.5 rounded-token-xs font-bold uppercase text-token-xs tracking-wider bg-surface-subtle border border-surface-border text-white hover:bg-surface-hover"
                   >
                     Sign In Existing Account
                   </button>
@@ -499,33 +497,33 @@ export default function Home() {
       />
 
       {/* Footer */}
-      <footer className="bg-surface/80 border-t border-surface-border py-12 mt-20">
+      <footer className="bg-surface-card border-t border-surface-border py-12 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-neon-lime flex items-center justify-center text-background font-black shadow-neon">
+              <div className="w-9 h-9 rounded-token-xs bg-brand-coral flex items-center justify-center text-white font-black shadow-coral">
                 <Dumbbell className="w-5 h-5 stroke-[2.5]" />
               </div>
               <div>
-                <span className="text-lg font-black tracking-tight text-white block uppercase">
-                  D&apos;s <span className="text-neon-lime">GYM</span>
+                <span className="text-token-md font-black tracking-tight text-white block uppercase">
+                  any<span className="text-brand-coral">gym</span>
                 </span>
                 <span className="text-[10px] text-zinc-400 uppercase tracking-widest block">
-                  Built with Supabase &amp; Vercel
+                  Universal Gym Membership
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-6 text-xs text-zinc-400">
-              <button onClick={() => setActiveTab('home')} className="hover:text-neon-lime transition-colors">Overview</button>
-              <button onClick={() => setActiveTab('calculator')} className="hover:text-neon-lime transition-colors">BMI Advisor</button>
-              <button onClick={() => setActiveTab('workout-plan')} className="hover:text-neon-lime transition-colors">30-Day Plan</button>
+            <div className="flex items-center gap-6 text-token-xs text-zinc-400">
+              <button onClick={() => setActiveTab('home')} className="hover:text-brand-coral transition-colors duration-instant">Overview</button>
+              <button onClick={() => setActiveTab('calculator')} className="hover:text-brand-coral transition-colors duration-instant">BMI Advisor</button>
+              <button onClick={() => setActiveTab('workout-plan')} className="hover:text-brand-coral transition-colors duration-instant">30-Day Plan</button>
               <button 
                 onClick={() => {
                   if (isLoggedIn) setActiveTab('dashboard');
                   else handleOpenAuth('signup');
                 }} 
-                className="hover:text-neon-lime transition-colors"
+                className="hover:text-brand-coral transition-colors duration-instant"
               >
                 Member Tracker
               </button>
@@ -536,8 +534,8 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="text-xs text-zinc-500">
-              &copy; {new Date().getFullYear()} D&apos;s Gym. All rights reserved.
+            <div className="text-[12px] text-zinc-500">
+              &copy; {new Date().getFullYear()} anygym — Universal Gym Membership. All rights reserved.
             </div>
           </div>
         </div>

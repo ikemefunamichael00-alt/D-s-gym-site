@@ -10,33 +10,59 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#08090C",
-        surface: {
-          DEFAULT: "#101217",
-          subtle: "#161922",
-          border: "#232836",
-          hover: "#1D222E"
+        brand: {
+          coral: "#ff6b6b",
+          coralHover: "#ff5252",
+          coralLight: "rgba(255, 107, 107, 0.12)",
+          coralBorder: "rgba(255, 107, 107, 0.35)",
         },
-        neon: {
-          lime: "#CCFF00",
-          limeHover: "#B3E600",
-          glow: "rgba(204, 255, 0, 0.25)"
+        surface: {
+          base: "#000000",
+          card: "#0c0e12",
+          subtle: "#14171f",
+          border: "#202533",
+          hover: "#1a1f2b",
+        },
+        token: {
+          textPrimary: "#111827",
+          textSecondary: "#4b5563",
+          textTertiary: "#171717",
+          textInverse: "#ffffff",
+          borderMuted: "#d1d5db",
+          borderDefault: "#e5e7eb",
         },
         accent: {
           cyan: "#00F0FF",
-          orange: "#FF6B00",
-          rose: "#FF2E63",
-          emerald: "#10B981"
+          orange: "#FF922B",
+          emerald: "#20C997",
+          purple: "#845EF7",
         }
       },
+      fontSize: {
+        'token-xs': ['14px', '20px'],
+        'token-sm': ['16px', '24px'],
+        'token-md': ['18px', '28px'],
+        'token-lg': ['20px', '28px'],
+        'token-xl': ['30px', '36px'],
+        'token-2xl': ['36px', '44px'],
+        'token-3xl': ['60px', '1.08'],
+      },
+      borderRadius: {
+        'token-xs': '8px',
+        'token-sm': '9999px',
+      },
       boxShadow: {
-        'neon': '0 0 20px -3px rgba(204, 255, 0, 0.35)',
-        'neon-strong': '0 0 35px 2px rgba(204, 255, 0, 0.45)',
-        'cyan-glow': '0 0 20px -3px rgba(0, 240, 255, 0.35)',
-        'card': '0 8px 30px rgba(0, 0, 0, 0.6)',
+        'token-1': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'coral': '0 0 25px -4px rgba(255, 107, 107, 0.45)',
+        'coral-strong': '0 0 40px 2px rgba(255, 107, 107, 0.6)',
+        'card': '0 8px 30px rgba(0, 0, 0, 0.7)',
+      },
+      transitionDuration: {
+        'instant': '150ms',
+        'fast': '300ms',
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['Poppins', '__Poppins_6bee3b', 'system-ui', 'sans-serif'],
       }
     },
   },
